@@ -16,12 +16,15 @@ package com.example.webview
 
 import android.Manifest
 import android.app.AlertDialog
+import android.app.DownloadManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
+import android.view.KeyEvent
 import android.webkit.*
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -32,6 +35,8 @@ class FileUploadActivity : AppCompatActivity() {
     private var mUploadMessage:ValueCallback<Uri>? = null
 
     var uploadMessage:ValueCallback<Array<Uri>>? = null
+
+    var myWebView: WebView? = null
 
     val REQUEST_SELECT_FILE = 100
     val value = 101
@@ -47,15 +52,35 @@ class FileUploadActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.file_upload_activity)
         supportActionBar?.hide()
-        val myWebView: WebView = findViewById(R.id.fileUploadView)
-        myWebView.settings.javaScriptEnabled = true;
-        myWebView.settings.domStorageEnabled = true
-        myWebView.webViewClient = object : WebViewClient() {
+        myWebView = findViewById(R.id.fileUploadView)
+        myWebView?.settings?.javaScriptEnabled = true;
+        myWebView?.settings?.domStorageEnabled = true
+        myWebView?.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
                 view.loadUrl(url);
                 return true;
             }
         }
+        myWebView?.setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            val request = DownloadManager.Request(Uri.parse(url))
+            request.setMimeType(mimeType)
+            //------------------------COOKIE!!------------------------
+            val cookies = CookieManager.getInstance().getCookie(url)
+            request.addRequestHeader("cookie", cookies)
+            //------------------------COOKIE!!------------------------
+            request.addRequestHeader("User-Agent", userAgent)
+            request.setDescription("Downloading file...")
+            request.setTitle(URLUtil.guessFileName(url, contentDisposition, mimeType))
+            request.allowScanningByMediaScanner()
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            request.setDestinationInExternalPublicDir(
+                Environment.DIRECTORY_DOWNLOADS,
+                URLUtil.guessFileName(url, contentDisposition, mimeType)
+            )
+            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            dm.enqueue(request)
+            Toast.makeText(applicationContext, "Downloading File, Size: ${contentLength/1000000} MB", Toast.LENGTH_LONG).show()
+        })
         myWebView?.webChromeClient = object:WebChromeClient() {
 
             override fun onJsAlert(view: WebView, url: String, message: String, result: JsResult): Boolean {
@@ -74,15 +99,6 @@ class FileUploadActivity : AppCompatActivity() {
                 return true
             }
 
-            // For 3.0+ Devices (Start)
-            // onActivityResult attached before constructor
-            fun openFileChooser(uploadMsg : ValueCallback<Uri>, acceptType:String) {
-                mUploadMessage = uploadMsg
-                val i = Intent(Intent.ACTION_GET_CONTENT)
-                i.addCategory(Intent.CATEGORY_OPENABLE)
-                i.type = "*/*"
-                startActivityForResult(Intent.createChooser(i, "File Browser"), FILECHOOSER_RESULTCODE)
-            }
 
             // For Lollipop 5.0+ Devices
             override fun onShowFileChooser(mWebView:WebView, filePathCallback:ValueCallback<Array<Uri>>, fileChooserParams:WebChromeClient.FileChooserParams):Boolean {
@@ -105,27 +121,9 @@ class FileUploadActivity : AppCompatActivity() {
                     return false
                 }
             }
-
-            //For Android 4.1 only
-            fun openFileChooser(uploadMsg:ValueCallback<Uri>, acceptType:String, capture:String) {
-                mUploadMessage = uploadMsg
-                val intent = Intent(Intent.ACTION_GET_CONTENT)
-                intent.addCategory(Intent.CATEGORY_OPENABLE)
-                intent.type = "*/*"
-                startActivityForResult(Intent.createChooser(intent, "File Browser"), FILECHOOSER_RESULTCODE)
-            }
-
-            fun openFileChooser(uploadMsg:ValueCallback<Uri>) {
-                makeRequest()
-                mUploadMessage = uploadMsg
-                val i = Intent(Intent.ACTION_GET_CONTENT)
-                i.addCategory(Intent.CATEGORY_OPENABLE)
-                i.type = "*/*"
-                startActivityForResult(Intent.createChooser(i, "File Browser"), FILECHOOSER_RESULTCODE)
-            }
         }
         fun setView() {
-            myWebView.loadUrl("https://www.ilovepdf.com/pdf_to_word")
+            myWebView?.loadUrl("www.google.com")
         }
 
         setView();
@@ -153,5 +151,20 @@ class FileUploadActivity : AppCompatActivity() {
         }
 
 
+    }
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (event.action === KeyEvent.ACTION_DOWN) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_BACK -> {
+                    if (myWebView?.canGoBack() == true) {
+                        myWebView?.goBack()
+                    } else {
+                        finish()
+                    }
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
     }
 }
