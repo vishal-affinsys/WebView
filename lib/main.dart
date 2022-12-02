@@ -11,6 +11,7 @@ void main() async {
   await FlutterDownloader.initialize(
     debug:
         true, // optional: set to false to disable printing logs to console (default: true)
+    ignoreSsl: true,
   );
   if (Platform.isAndroid) {
     await AndroidInAppWebViewController.setWebContentsDebuggingEnabled(true);

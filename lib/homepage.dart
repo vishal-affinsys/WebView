@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:web/fileUpload.dart';
 
 import 'camera.dart';
-import 'fileUpload.dart';
 import 'location.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -13,14 +14,35 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  String _batteryLevel = 'Unknown battery level.';
+  static const platform = MethodChannel('samples.flutter.dev/battery');
+
+  Future<void> _getBatteryLevel() async {
+    String batteryLevel;
+    try {
+      final int result = await platform.invokeMethod('getBatteryLevel');
+      print("batter: $result");
+      batteryLevel = 'Battery level at $result % .';
+    } on PlatformException catch (e) {
+      batteryLevel = "Failed to get battery level: '${e.message}'.";
+    }
+
+    setState(() {
+      _batteryLevel = batteryLevel;
+    });
+  }
+
   @override
   void initState() {
     Future.microtask(() async {
       await Permission.camera.request();
       await Permission.location.request();
-      await Permission.microphone.request();
       await Permission.accessMediaLocation.request();
+      await Permission.storage.request();
+      await Permission.manageExternalStorage.request();
+      await _getBatteryLevel();
     });
+
     super.initState();
   }
 
