@@ -11,22 +11,17 @@ import WebView from 'react-native-webview';
 
 const App = () => {
   const webView = useRef(null);
-  // const [canGoBack, setCanGoBack] = useState(false);
 
   useEffect(() => {
     if (Platform.OS === 'android') {
       BackHandler.addEventListener('hardwareBackPress', HandleBackPressed);
-
-      return () => {
-        BackHandler.removeEventListener('hardwareBackPress', HandleBackPressed);
-      };
     }
   }, []); // INITIALIZE ONLY ONCE
 
   const HandleBackPressed = () => {
     if (webView.current.canGoBack) {
       webView.current.goBack();
-      return true; // PREVENT DEFAULT BEHAVIOUR (EXITING THE APP)
+      return true;
     }
     return false;
   };
@@ -38,6 +33,7 @@ const App = () => {
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
         PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
         PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
       ]);
       console.log(granted);
       return granted;
@@ -59,6 +55,11 @@ const App = () => {
         mediaPlaybackRequiresUserAction={false}
         javaScriptEnabled={true}
         allowFileAccess={true}
+        allowsFullscreenVideo={true}
+        contentMode="mobile"
+        lackPermissionToDownloadMessage="Cannot download as permission was denied"
+        downloadingMessage="Downloading"
+        domStorageEnabled={true}
       />
     </View>
   );
